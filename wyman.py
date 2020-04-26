@@ -18,7 +18,7 @@ def get_programs(ctx, args, incomplete):
 
     # Loop over paths to find executables and return only names
     for i in paths:
-        programs.extend(subprocess.run([f'find {i} -maxdepth 3 -executable -printf "%f\n"'], stdout=subprocess.PIPE, shell=True).stdout.decode('utf-8').split("\n"))
+        programs.extend(subprocess.run([f'find {i} -maxdepth 3 -executable -printf "%f\n"'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True).stdout.decode('utf-8').split("\n"))
 
     # Convert to a set to remove duplicates, then back to a list
     programs = list(set(programs))
