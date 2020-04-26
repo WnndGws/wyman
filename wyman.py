@@ -11,8 +11,8 @@ import click
 def get_programs(ctx, args, incomplete):
     """ Get the list of possible binaries on the system
     """
-    # Call subprocess with shell envs, decode the bytes to a str, split by : character
-    paths = subprocess.run(["echo $PATH"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True).stdout.decode('utf-8').split(":")
+    # Call subprocess with shell envs, decode the bytes to a str, remove trailing \n, split by : character
+    paths = subprocess.run(["echo $PATH"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True).stdout.decode('utf-8').partition("\n")[0].split(":")
 
     programs = []
 
@@ -22,6 +22,7 @@ def get_programs(ctx, args, incomplete):
 
     # Convert to a set to remove duplicates, then back to a list
     programs = list(set(programs))
+    programs.sort()
 
     return [k for k in programs if incomplete in k]
 
