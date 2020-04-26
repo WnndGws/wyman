@@ -1,12 +1,18 @@
 #!/bin/python
+""" Checks for the imput program in order of tldr, man, and --help
+Has autocompletion
+"""
 
-import click
 import re
 import subprocess
 
+import click
+
 def get_programs(ctx, args, incomplete):
+    """ Get the list of possible binaries on the system
+    """
     # Call subprocess with shell envs, decode the bytes to a str, split by : character
-    paths = subprocess.run(["echo $PATH"], stdout=subprocess.PIPE, shell=True).stdout.decode('utf-8').split(":")
+    paths = subprocess.run(["echo $PATH"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True).stdout.decode('utf-8').split(":")
 
     programs = []
 
