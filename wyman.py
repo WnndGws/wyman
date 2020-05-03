@@ -1,5 +1,5 @@
 #!/bin/python
-""" Checks for the imput program in order of tldr, man, and --help
+""" Checks for the input program in order of tldr, man, and --help
 Has autocompletion
 """
 
