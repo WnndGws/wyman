@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python
 """ Checks for the input program in order of tldr, man, and --help
 Has autocompletion
 """
