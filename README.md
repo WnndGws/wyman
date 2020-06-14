@@ -1,5 +1,4 @@
 ```bash
 $ python setup.py build
-$ sudo python setup.py install
+$ python setup.py install --user
 $ eval "$(_WYMAN_COMPLETE=source_zsh wyman)"
-```
