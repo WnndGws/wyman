@@ -36,31 +36,43 @@ def main(program):
     if len(match) > 0:
         try:
             args = ["tldr", program]
-            subprocess.check_call(args)
+            output = subprocess.check_output(args).decode('utf-8')
             success = True
+            click.echo("\nTldr found....")
+            click.echo(output)
         except subprocess.CalledProcessError:
             success = False
+    else:
+        click.echo(f"No tldr entry for {program}")
     if not success:
-        try:
-            args = ["curl", f"https://cheat.sh/{program}"]
-            subprocess.check_call(args)
+        args = ["curl", "--silent", f"https://cheat.sh/{program}"]
+        output = subprocess.check_output(args).decode('utf-8')
+        if not output[:7] == "Unknown":
             success = True
-        except subprocess.CalledProcessError:
+            click.echo("\ncheat.sh found....")
+            click.echo(output)
+        else:
             success = False
+            click.echo(f"No cheat.sh entry for {program}")
     if not success:
         try:
             args = ["man", program]
-            subprocess.check_call(args)
+            output = subprocess.check_output(args).decode('utf-8')
             success = True
+            click.echo("\nMan-page found....")
+            click.echo(output)
         except subprocess.CalledProcessError:
             success = False
     if not success:
         try:
             args = [program, "--help"]
-            subprocess.call(args)
+            output = subprocess.check_output(args).decode('utf-8')
             success = True
+            click.echo("\n--help flag found....")
+            click.echo(output)
         except OSError:
             success = False
+            click.echo(f"No --help flag for {program}")
             click.echo(f"There either is no program called {program}, or it does not have a man-page")
 
 if __name__ == "__main__":
