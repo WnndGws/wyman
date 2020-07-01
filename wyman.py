@@ -42,6 +42,13 @@ def main(program):
             success = False
     if not success:
         try:
+            args = ["curl", f"https://cheat.sh/{program}"]
+            subprocess.check_call(args)
+            success = True
+        except subprocess.CalledProcessError:
+            success = False
+    if not success:
+        try:
             args = ["man", program]
             subprocess.check_call(args)
             success = True
