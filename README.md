@@ -1,3 +1,4 @@
+* Run the following in the folder
 ```bash
 $ python setup.py build
 $ python setup.py install --user
