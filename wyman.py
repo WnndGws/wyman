@@ -27,7 +27,7 @@ def get_programs(ctx, args, incomplete):
     return [k for k in programs if incomplete in k]
 
 @click.command()
-@click.argument("program", type=click.STRING, autocompletion=get_programs)
+@click.argument("program", type=click.STRING, shell_complete=get_programs)
 def main(program):
     """Checks to see if there is a tldr"""
     success = False
