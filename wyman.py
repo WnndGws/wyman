@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-""" Checks for the input program in order of tldr, man, and --help
+"""Checks for the input program in order of tldr, man, and --help.
+
 Has autocompletion
 """
 
@@ -9,7 +10,7 @@ import subprocess
 import click
 
 
-def get_programs(ctx, args, incomplete):
+def get_programs(ctx, args: str, incomplete):
     """Get the list of possible binaries on the system"""
     # Call subprocess with shell envs, decode the bytes to a str, remove trailing \n, split by : character
     paths = (
@@ -49,13 +50,13 @@ def get_programs(ctx, args, incomplete):
 @click.command()
 @click.argument("program", type=click.STRING, shell_complete=get_programs)
 def main(program):
-    """Checks to see if there is a tldr"""
+    """Checks to see if there is a tldr."""
     success = False
     tldr_list = subprocess.check_output(["tldr", "--list"]).strip()
     match = re.findall(r"(%s)" % program, str(tldr_list))
     if len(match) > 0:
         try:
-            args = ["navi", "--tldr", program]
+            args = ["tldr", program]
             success = True
             subprocess.check_call(args)
         except subprocess.CalledProcessError:
@@ -64,17 +65,20 @@ def main(program):
         click.echo(f"No tldr entry for {program}")
     if not success:
         try:
-            args = ["navi", "--cheatsh", program]
-            success = True
-            subprocess.check_call(args)
-            # args = ["curl", "--silent", "--max-time", "1", f"https://cheat.sh/{program}"]
-            # output = subprocess.check_output(args).decode('utf-8')
-            # if not output[:7] == "Unknown":
-            # success = True
-            # click.echo(output)
-            # else:
-            # success = False
-            # click.echo(f"No cheat.sh entry for {program}")
+            args = [
+                "curl",
+                "--silent",
+                "--max-time",
+                "1",
+                f"https://cheat.sh/{program}",
+            ]
+            output = subprocess.check_output(args).decode("utf-8")
+            if not output[:7] == "Unknown":
+                success = True
+                click.echo(output)
+            else:
+                success = False
+                click.echo(f"No cheat.sh entry for {program}")
         except subprocess.CalledProcessError:
             success = False
             click.echo("cheat.sh timed out")
