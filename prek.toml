@@ -1,0 +1,68 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-added-large-files" },
+  { id = "check-json" },
+  { id = "check-json5" },
+  { id = "check-toml" },
+  { id = "check-yaml" },
+  { id = "check-xml" },
+  { id = "check-merge-conflict" },
+  { id = "detect-private-key" },
+]
+
+[[repos]]
+repo = "local"
+[[repos.hooks]]
+id = "trufflehog"
+name = "TruffleHog"
+description = "Detect secrets in your data."
+entry = "trufflehog git file://."
+language = "system"
+pass_filenames = false
+stages = ["pre-commit", "pre-push"]
+
+[[repos]]
+repo = "local"
+[[repos.hooks]]
+id = "bandit"
+name = "Bandit"
+description = "A Python source code security analyzer"
+entry = "bandit"
+args = ["-ll"]                                         # only medium or higher
+language = "system"
+types = ["python"]
+stages = ["pre-commit"]
+
+[[repos]]
+repo = "local"
+[[repos.hooks]]
+id = "pyrefly"
+name = "Pyrefly"
+entry = "pyrefly check"
+language = "system"
+pass_filenames = true
+types = ["python"]
+stages = ["pre-commit"]
+
+[[repos]]
+repo = "local"
+[[repos.hooks]]
+id = "vulture"
+name = "Vulture"
+entry = "vulture"
+language = "system"
+pass_filenames = true
+types = ["python"]
+stages = ["pre-commit"]
+
+[[repos]]
+repo = "https://github.com/abravalheri/validate-pyproject"
+rev = "v0.25"
+hooks = [{ id = "validate-pyproject" }]
