@@ -1,106 +1,116 @@
-#!/usr/bin/env python
-"""Checks for the input program in order of tldr, man, and --help.
-
-Has autocompletion
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.14"
+# dependencies = [
+#     "httpx",
+#     "plumbum",
+#     "rich",
+#     "typer",
+# ]
+# ///
+"""wyman: Small utility to check tldr, cheat.sh, manpages, and help in that
+order.
 """
 
-import re
-import subprocess
+import os
+from enum import StrEnum
+from typing import Annotated
 
-import click
+import httpx
+import plumbum
+import typer
+from rich.console import Console
+from rich.text import Text
 
 
-def get_programs(ctx, args: str, incomplete):
-    """Get the list of possible binaries on the system"""
-    # Call subprocess with shell envs, decode the bytes to a str, remove trailing \n, split by : character
-    paths = (
-        subprocess.run(
-            ["echo $PATH"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            shell=True,
+class Source(StrEnum):
+    TLDR = "tldr"
+    CHEAT = "cheat"
+    MAN = "man"
+
+
+app = typer.Typer(add_completion=False)
+console = Console()
+
+
+def _tldr(cmd_name: str, args: tuple[str, ...] = ()) -> bool:
+    if plumbum.local.which("tldr") is None:
+        console.print("tldr is not installed, skipping")
+        return False
+    retcode, _, _ = plumbum.local["tldr"][cmd_name][args].run(retcode=None)
+    if retcode == 0:
+        os.execvp("tldr", ["tldr", *args, cmd_name])
+        return True
+    console.print(f"no `tldr` page found for {cmd_name}...")
+    return False
+
+
+def _cheat(cmd_name: str) -> bool:
+    try:
+        resp = httpx.get(
+            f"https://cht.sh/{cmd_name}",
+            headers={"User-Agent": "curl/8"},
+            timeout=10,
         )
-        .stdout.decode("utf-8")
-        .partition("\n")[0]
-        .split(":")
-    )
-
-    programs = []
-
-    # Loop over paths to find executables and return only names
-    for i in paths:
-        programs.extend(
-            subprocess.run(
-                [f'find {i} -maxdepth 3 -executable -printf "%f\n"'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                shell=True,
-            )
-            .stdout.decode("utf-8")
-            .split("\n")
-        )
-
-    # Convert to a set to remove duplicates, then back to a list
-    programs = list(set(programs))
-    programs.sort()
-
-    return [k for k in programs if incomplete in k]
+    except httpx.HTTPError as exc:
+        console.print(f"cheat.sh request failed: {exc}")
+        return False
+    if not resp.is_success:
+        console.print(f"`cheat.sh` returned a {resp.status_code}")
+        return False
+    first_line = resp.text.splitlines()[0] if resp.text else ""
+    if first_line == "Unknown topic.":
+        console.print(f"no `cheat.sh` page found for {cmd_name}...")
+        return False
+    console.print(Text.from_ansi(resp.text))
+    return True
 
 
-@click.command()
-@click.argument("program", type=click.STRING, shell_complete=get_programs)
-def main(program):
-    """Checks to see if there is a tldr."""
-    success = False
-    tldr_list = subprocess.check_output(["tldr", "--list"]).strip()
-    match = re.findall(r"(%s)" % program, str(tldr_list))
-    if len(match) > 0:
-        try:
-            args = ["tldr", program]
-            success = True
-            subprocess.check_call(args)
-        except subprocess.CalledProcessError:
-            success = False
-    else:
-        click.echo(f"No tldr entry for {program}")
-    if not success:
-        try:
-            args = [
-                "curl",
-                "--silent",
-                "--max-time",
-                "1",
-                f"https://cheat.sh/{program}",
-            ]
-            output = subprocess.check_output(args).decode("utf-8")
-            if not output[:7] == "Unknown":
-                success = True
-                click.echo(output)
-            else:
-                success = False
-                click.echo(f"No cheat.sh entry for {program}")
-        except subprocess.CalledProcessError:
-            success = False
-            click.echo("cheat.sh timed out")
-    if not success:
-        try:
-            args = ["man", program]
-            success = True
-            subprocess.check_call(args)
-        except subprocess.CalledProcessError:
-            success = False
-    if not success:
-        try:
-            args = [program, "--help"]
-            success = True
-            subprocess.check_call(args)
-        except OSError:
-            success = False
-            click.echo(f"No --help flag for {program}")
-            click.echo(
-                f"There either is no program called {program}, or it does not have a man-page"
-            )
+def _man(cmd_name: str) -> None:
+    retcode = plumbum.local["man"]["-w", cmd_name].run(retcode=None)[0]
+    if retcode == 0:
+        os.execvp("man", ["man", cmd_name])  # never returns
+    console.print(f"no `man-page` found for {cmd_name}...")
+
+
+CHECKERS: dict[Source, object] = {
+    Source.TLDR: lambda c: _tldr(c, ("--platform", "linux")),
+    Source.CHEAT: _cheat,
+    Source.MAN: lambda c: (_man(c), False)[1],  # _man execvp or falls through
+}
+
+
+@app.command()
+def main(
+    command: Annotated[str, typer.Argument(help="Command to search for")],
+    prefer: Annotated[
+        Source | None,
+        typer.Option(
+            "--prefer",
+            "-p",
+            help="Try this source first, then the rest in default order.",
+        ),
+    ] = None,
+) -> None:
+    """Check tldr, cheat.sh, and man for COMMAND, in that order."""
+    order = list(Source)
+    if prefer is not None:
+        order.remove(prefer)
+        order.insert(0, prefer)
+
+    for source in order:
+        label = {
+            Source.TLDR: f"checking `tldr {command}`",
+            Source.CHEAT: f"fetching cheat.sh/{command}",
+            Source.MAN: f"checking `man {command}`",
+        }[source]
+        with console.status(f"{label}...", spinner="dots"):
+            if CHECKERS[source](command):
+                raise typer.Exit
+        if source is Source.MAN:
+            break
+    raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
-    main()
+    app()

@@ -1,0 +1,25 @@
+[project]
+name = "wyman"
+version = "2.0.0"
+description = "Runs tldr, cheat.sh, and man on a command (in that order)"
+readme = "README.md"
+authors = [
+  { name = "Wynand Gouws", email = "WnndGws@users.noreply.github.com" },
+]
+requires-python = ">=3.14"
+dependencies = [
+  "httpx>=0.28.1",
+  "plumbum>=2.0.2",
+  "rich>=15.0.0",
+  "typer>=0.27.2",
+]
+
+[project.scripts]
+wyman = "wyman:main"
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.vulture]
+ignore_names = ["main"]
